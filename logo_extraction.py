@@ -13,8 +13,7 @@ from django.db import models
 
 
 class Store(Model):
-    logo = models.ImageField(max_length=80, upload_to="stores/%Y/%m/%d/", null=True, blank=True,
-                              )
+    logo = models.ImageField(max_length=80, upload_to="stores/%Y/%m/%d/", null=True, blank=True)
 
 
 def extract_domain(url):
@@ -164,9 +163,7 @@ class LogoExtraction:
                         image.screenshot('crawled/' + extract_domain(url) + '/' + '-1.png')
                         with open('crawled/' + extract_domain(url) + '/' + '-1.png', "rb") as image_file:
                             logo_image = File(image_file)
-                        store = Store.objects.get(url=url)
-                        store.logo = logo_image
-                        store.save()
+                        Store.objects.filter(url=url).update(logo=logo_image)
                         break
 
                     # search for images inside <div> tag
@@ -201,11 +198,7 @@ class LogoExtraction:
                 data = requests.get(values[i]).content
                 # todo
                 # image may be webp! you can check it with value[i].endswith('webp')
-                store = Store.objects.get(url=key)
-                store.logo = data
-                store.save()
-                break
-
+                Store.objects.filter(url=key).update(logo=data)
 
         json.dump(images_link, open("output.json", 'w'))
         f = open('input.txt', 'w')
