@@ -1,3 +1,5 @@
+from django.core.files import File
+from django.db.models import Model
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
@@ -10,6 +12,9 @@ from urllib.parse import urlparse
 from django.db import models
 
 
+class Store(Model):
+    logo = models.ImageField(max_length=80, upload_to="stores/%Y/%m/%d/", null=True, blank=True,
+                              )
 
 
 def extract_domain(url):
@@ -155,10 +160,17 @@ class LogoExtraction:
                 if len(images_link[url]) == 0:
                     images = self.get_element_by_xpath(self.driver, "//div/a/*[name()='svg']")
                     for image in images:
-                        if image.get_attribute('outerHTML'):
-                            image.screenshot('crawled/' + extract_domain(url) + '/' + '-1.png')
+                        #todo
+                        image.screenshot('crawled/' + extract_domain(url) + '/' + '-1.png')
+                        with open('crawled/' + extract_domain(url) + '/' + '-1.png', "rb") as image_file:
+                            logo_image = File(image_file)
+                        store = Store.objects.get(url=url)
+                        store.logo = logo_image
+                        store.save()
+                        break
 
                     # search for images inside <div> tag
+                if len(images_link[url]) == 0:
                     images = self.get_element_by_xpath(self.driver, '//div/a/img')
                     images_count['div'] += 1
                     for image in images:
@@ -185,18 +197,15 @@ class LogoExtraction:
         """
         for key, values in images_link.items():
             domain = extract_domain(key)
-            try:
-                os.mkdir('crawled/' + domain)
-            except:
-                logging.error('Directory already exists')
             for i in range(len(values)):
                 data = requests.get(values[i]).content
-                if values[i].endswith('webp'):
-                    f = open('crawled/' + domain + '/' + str(i) + '.webp', 'wb')
-                else:
-                    f = open('crawled/' + domain + '/' + str(i) + '.jpg', 'wb')
-                f.write(data)
-                f.close()
+                # todo
+                # image may be webp! you can check it with value[i].endswith('webp')
+                store = Store.objects.get(url=key)
+                store.logo = data
+                store.save()
+                break
+
 
         json.dump(images_link, open("output.json", 'w'))
         f = open('input.txt', 'w')
@@ -206,5 +215,5 @@ class LogoExtraction:
 
 
 if __name__ == '__main__':
-    L = LogoExtraction(1)
+    L = LogoExtraction(int(sys.argv[2]))
     L.fetch_logos(sys.argv[1])
